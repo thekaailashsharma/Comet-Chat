@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import learn.comet.chat.messages.data.MessageRepository
+import kotlinx.coroutines.delay
 
 private const val TAG = "MessageViewModel"
 
@@ -43,6 +44,9 @@ class MessageViewModel(
     private var currentReceiverId: String? = null
     private var isLoadingMore = false
     private var messageListenerJob: Job? = null
+
+    private val _highlightedMessageId = MutableStateFlow<Int?>(null)
+    val highlightedMessageId: StateFlow<Int?> = _highlightedMessageId.asStateFlow()
 
     fun setReplyToMessage(message: BaseMessage) {
         repository.setReplyToMessage(message)
@@ -247,6 +251,15 @@ class MessageViewModel(
                 Log.e(TAG, "Exception while sending media message: ${e.message}")
                 _uiState.value = MessageUiState.Error(e.message ?: "Failed to send media message")
             }
+        }
+    }
+
+    fun scrollToMessage(messageId: Int) {
+        viewModelScope.launch {
+            _highlightedMessageId.value = messageId
+            // Clear highlight after animation duration
+            delay(1000)
+            _highlightedMessageId.value = null
         }
     }
 

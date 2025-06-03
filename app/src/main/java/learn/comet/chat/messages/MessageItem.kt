@@ -1,7 +1,9 @@
 package learn.comet.chat.messages
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +29,7 @@ import learn.comet.chat.messages.data.MediaMessageState
 fun MessageItem(
     message: BaseMessage,
     mediaState: MediaMessageState?,
+    isHighlighted: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val isCurrentUser = message.sender?.uid == CometChat.getLoggedInUser()?.uid
@@ -41,8 +44,16 @@ fun MessageItem(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
 
+    val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = if (isHighlighted) highlightColor else Color.Transparent,
+        animationSpec = tween(500)
+    )
+
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .background(animatedBackgroundColor, RoundedCornerShape(16.dp)),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
         Row(

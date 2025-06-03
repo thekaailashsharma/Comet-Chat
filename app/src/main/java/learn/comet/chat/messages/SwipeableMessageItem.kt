@@ -5,8 +5,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material3.*
@@ -21,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.cometchat.chat.core.CometChat
@@ -35,8 +38,10 @@ import kotlin.math.roundToInt
 fun SwipeableMessageItem(
     message: BaseMessage,
     mediaState: MediaMessageState?,
+    isHighlighted: Boolean = false,
     onReply: (BaseMessage) -> Unit,
     onSwipeStateChanged: (SwipeableState<Int>) -> Unit,
+    onReplyClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -93,7 +98,9 @@ fun SwipeableMessageItem(
         ) {
             MessageContent(
                 message = message,
-                mediaState = mediaState
+                mediaState = mediaState,
+                isHighlighted = isHighlighted,
+                onReplyClick = onReplyClick
             )
         }
 
@@ -110,20 +117,26 @@ fun SwipeableMessageItem(
 @Composable
 fun MessageContent(
     message: BaseMessage,
-    mediaState: MediaMessageState?
+    mediaState: MediaMessageState?,
+    isHighlighted: Boolean = false,
+    onReplyClick: (Int) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Show reply preview if this message is a reply
         message.metadata?.let { metadata ->
             ReplyMetadata.fromJson(metadata)?.let { replyMetadata ->
-                ReplyPreview(replyMetadata)
+                ReplyPreview(
+                    replyMetadata = replyMetadata,
+                    onClick = { onReplyClick(replyMetadata.repliedToMessageId) }
+                )
             }
         }
         
         // Original message content
         MessageItem(
             message = message,
-            mediaState = mediaState
+            mediaState = mediaState,
+            isHighlighted = isHighlighted
         )
     }
 }
@@ -131,29 +144,49 @@ fun MessageContent(
 @Composable
 fun ReplyPreview(
     replyMetadata: ReplyMetadata,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = MaterialTheme.shapes.small,
-        modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(4.dp),
+        modifier = modifier
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .clickable(onClick = onClick)
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth()
+                .padding(vertical = 4.dp, horizontal = 8.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Replying to ${replyMetadata.repliedToSender}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
+            // Vertical accent line
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(24.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        RoundedCornerShape(1.dp)
+                    )
             )
-            Text(
-                text = replyMetadata.repliedToText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = replyMetadata.repliedToSender,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = replyMetadata.repliedToText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 } 

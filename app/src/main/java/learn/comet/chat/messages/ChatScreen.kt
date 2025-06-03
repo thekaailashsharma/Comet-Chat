@@ -64,6 +64,7 @@ fun ChatScreen(
     val mediaPickerState by viewModel.mediaPickerState.collectAsState()
     val mediaMessageStates by viewModel.mediaMessageStates.collectAsState()
     val replyToMessage by viewModel.replyToMessage.collectAsState()
+    val highlightedMessageId by viewModel.highlightedMessageId.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -74,6 +75,16 @@ fun ChatScreen(
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(0)
+        }
+    }
+
+    // Handle scrolling to highlighted message
+    LaunchedEffect(highlightedMessageId) {
+        if (highlightedMessageId != null) {
+            val messageIndex = messages.indexOfFirst { it.id == highlightedMessageId }
+            if (messageIndex != -1) {
+                listState.animateScrollToItem(messageIndex)
+            }
         }
     }
 
@@ -155,6 +166,7 @@ fun ChatScreen(
                     AnimatedMessageItem(
                         message = message,
                         mediaState = mediaMessageStates[message.id],
+                        isHighlighted = message.id == highlightedMessageId,
                         onReply = { msg ->
                             viewModel.setReplyToMessage(msg)
                         },
@@ -172,7 +184,8 @@ fun ChatScreen(
                                     }
                                 }
                             }
-                        }
+                        },
+                        onScrollToMessage = viewModel::scrollToMessage
                     )
                 }
 
@@ -240,8 +253,10 @@ fun ChatTopBar(
 fun AnimatedMessageItem(
     message: BaseMessage,
     mediaState: MediaMessageState?,
+    isHighlighted: Boolean = false,
     onReply: (BaseMessage) -> Unit,
     onSwipeStateChanged: (SwipeableState<Int>) -> Unit,
+    onScrollToMessage: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isCurrentUser = message.sender?.uid == CometChat.getLoggedInUser()?.uid
@@ -256,8 +271,10 @@ fun AnimatedMessageItem(
         SwipeableMessageItem(
             message = message,
             mediaState = mediaState,
+            isHighlighted = isHighlighted,
             onReply = onReply,
             onSwipeStateChanged = onSwipeStateChanged,
+            onReplyClick = onScrollToMessage,
             modifier = modifier
         )
     }
