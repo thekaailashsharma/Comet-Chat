@@ -3,6 +3,7 @@ accompanistPermissions = "0.37.3"
 agp = "8.10.1"
 chatSdkAndroid = "4.0.12"
 coilCompose = "2.4.0"
+composeSwipebox = "1.4.0"
 kotlin = "2.1.20"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -21,6 +22,7 @@ androidx-material-icons-extended = { module = "androidx.compose.material:materia
 androidx-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "runtime" }
 chat-sdk-android = { module = "com.cometchat:chat-sdk-android", version.ref = "chatSdkAndroid" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+compose-swipebox = { module = "io.github.kevinnzou:compose-swipebox", version.ref = "composeSwipebox" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

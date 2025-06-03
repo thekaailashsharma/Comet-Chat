@@ -2,8 +2,11 @@ package learn.comet.chat.messages
 
 import android.text.format.DateUtils
 import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -14,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Velocity
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.cometchat.chat.constants.CometChatConstants
@@ -36,8 +41,15 @@ import kotlinx.coroutines.launch
 import learn.comet.chat.messages.data.MediaMessageState
 import java.text.SimpleDateFormat
 import java.util.*
+import com.kevinnzou.compose.swipebox.DragAnchors
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.SwipeableState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun ChatScreen(
     viewModel: MessageViewModel,
@@ -51,8 +63,12 @@ fun ChatScreen(
     val mediaState by viewModel.mediaState.collectAsState()
     val mediaPickerState by viewModel.mediaPickerState.collectAsState()
     val mediaMessageStates by viewModel.mediaMessageStates.collectAsState()
+    val replyToMessage by viewModel.replyToMessage.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    // Keep track of currently open swipe state
+    var currentSwipeState: SwipeableState<Int>? by remember { mutableStateOf(null) }
 
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
@@ -63,6 +79,21 @@ fun ChatScreen(
 
     LaunchedEffect(receiverId) {
         viewModel.startChat(receiverId)
+    }
+
+    // Handle list scroll to close open items
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (currentSwipeState != null && currentSwipeState!!.currentValue != 0) {
+                    coroutineScope.launch {
+                        currentSwipeState!!.animateTo(0)
+                        currentSwipeState = null
+                    }
+                }
+                return Offset.Zero
+            }
+        }
     }
 
     Scaffold(
@@ -83,6 +114,15 @@ fun ChatScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                
+                replyToMessage?.let { message ->
+                    ReplyBar(
+                        message = message,
+                        onCancelReply = viewModel::clearReplyToMessage,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
                 MessageInput(
                     text = messageText,
                     onTextChange = viewModel::updateMessageText,
@@ -99,13 +139,49 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            MessageList(
-                messages = messages,
-                mediaMessageStates = mediaMessageStates,
-                listState = listState,
-                onLoadMore = viewModel::loadMoreMessages,
-                modifier = Modifier.fillMaxSize()
-            )
+            LazyColumn(
+                reverseLayout = true,
+                state = listState,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(nestedScrollConnection)
+            ) {
+                items(
+                    items = messages,
+                    key = { it.id }
+                ) { message ->
+                    AnimatedMessageItem(
+                        message = message,
+                        mediaState = mediaMessageStates[message.id],
+                        onReply = { msg ->
+                            viewModel.setReplyToMessage(msg)
+                        },
+                        onSwipeStateChanged = { state ->
+                            if (state.targetValue == 0 && currentSwipeState == state) {
+                                currentSwipeState = null
+                            } else if (currentSwipeState == null) {
+                                currentSwipeState = state
+                            } else if (state.targetValue != 0) {
+                                val lastState = currentSwipeState
+                                currentSwipeState = state
+                                if (lastState?.targetValue != 0) {
+                                    coroutineScope.launch {
+                                        lastState?.animateTo(0)
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    if (messages.isNotEmpty()) {
+                        LoadMoreButton(onClick = viewModel::loadMoreMessages)
+                    }
+                }
+            }
 
             // Loading indicator
             if (uiState is MessageUiState.Loading) {
@@ -159,43 +235,14 @@ fun ChatTopBar(
     )
 }
 
-@Composable
-fun MessageList(
-    messages: List<BaseMessage>,
-    mediaMessageStates: Map<Int, MediaMessageState>,
-    listState: LazyListState,
-    onLoadMore: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        reverseLayout = true,
-        state = listState,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier
-    ) {
-        items(
-            items = messages,
-            key = { it.id }
-        ) { message ->
-            AnimatedMessageItem(
-                message = message,
-                mediaState = mediaMessageStates[message.id]
-            )
-        }
-
-        item {
-            if (messages.isNotEmpty()) {
-                LoadMoreButton(onClick = onLoadMore)
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun AnimatedMessageItem(
     message: BaseMessage,
-    mediaState: MediaMessageState?
+    mediaState: MediaMessageState?,
+    onReply: (BaseMessage) -> Unit,
+    onSwipeStateChanged: (SwipeableState<Int>) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val isCurrentUser = message.sender?.uid == CometChat.getLoggedInUser()?.uid
 
@@ -206,10 +253,60 @@ fun AnimatedMessageItem(
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
-        MessageItem(
+        SwipeableMessageItem(
             message = message,
-            mediaState = mediaState
+            mediaState = mediaState,
+            onReply = onReply,
+            onSwipeStateChanged = onSwipeStateChanged,
+            modifier = modifier
         )
+    }
+}
+
+@Composable
+fun ReplyBar(
+    message: BaseMessage,
+    onCancelReply: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        tonalElevation = 2.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Replying to ${message.sender?.name ?: "Unknown"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = when (message) {
+                        is TextMessage -> message.text
+                        is MediaMessage -> message.caption ?: "Media message"
+                        else -> "Message"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+            
+            IconButton(onClick = onCancelReply) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Cancel reply",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

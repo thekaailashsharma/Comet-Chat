@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.runtime)
     implementation(libs.accompanist.permissions)
+    implementation(libs.compose.swipebox)
 
 
     implementation(libs.chat.sdk.android)

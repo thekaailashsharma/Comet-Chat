@@ -38,10 +38,19 @@ class MessageViewModel(
     val mediaPickerState: StateFlow<MediaPickerState> = _mediaPickerState.asStateFlow()
 
     val mediaMessageStates = repository.mediaMessageStates
+    val replyToMessage = repository.replyToMessage
     
     private var currentReceiverId: String? = null
     private var isLoadingMore = false
     private var messageListenerJob: Job? = null
+
+    fun setReplyToMessage(message: BaseMessage) {
+        repository.setReplyToMessage(message)
+    }
+
+    fun clearReplyToMessage() {
+        repository.setReplyToMessage(null)
+    }
 
     fun startChat(receiverId: String) {
         if (currentReceiverId == receiverId) return
@@ -177,7 +186,7 @@ class MessageViewModel(
                         Log.d(TAG, "Message sent successfully: ${it.id}")
                         _messageText.value = ""
                         _uiState.value = MessageUiState.Success
-                       loadInitialMessages()
+                        loadInitialMessages()
                     }
                     .onFailure { error ->
                         Log.e(TAG, "Failed to send message: ${error.message}")
@@ -244,6 +253,7 @@ class MessageViewModel(
     override fun onCleared() {
         super.onCleared()
         messageListenerJob?.cancel()
+        clearReplyToMessage()
         Log.d(TAG, "ViewModel cleared")
     }
 }

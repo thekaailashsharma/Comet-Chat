@@ -28,6 +28,13 @@ class MessageRepository(
     private val _mediaMessageStates = MutableStateFlow<Map<Int, MediaMessageState>>(emptyMap())
     val mediaMessageStates: StateFlow<Map<Int, MediaMessageState>> = _mediaMessageStates.asStateFlow()
 
+    private val _replyToMessage = MutableStateFlow<BaseMessage?>(null)
+    val replyToMessage: StateFlow<BaseMessage?> = _replyToMessage.asStateFlow()
+
+    fun setReplyToMessage(message: BaseMessage?) {
+        _replyToMessage.value = message
+    }
+
     fun getMessages(receiverId: String, limit: Int = 30): Flow<List<BaseMessage>> = flow {
         Log.d(TAG, "Fetching messages for receiver: $receiverId")
         
@@ -98,12 +105,20 @@ class MessageRepository(
                     receiverId,
                     message,
                     CometChatConstants.RECEIVER_TYPE_USER
-                )
+                ).apply {
+                    // Add reply metadata if replying to a message
+                    _replyToMessage.value?.let { replyTo ->
+                        val replyMetadata = ReplyMetadata.fromMessage(replyTo)
+                        metadata = ReplyMetadata.toJson(replyMetadata)
+                    }
+                }
 
                 CometChat.sendMessage(textMessage, object : CometChat.CallbackListener<TextMessage>() {
                     override fun onSuccess(message: TextMessage) {
                         Log.d(TAG, "Message sent successfully: ${message.id}")
                         _messageUpdates.tryEmit(message)
+                        // Clear reply state after successful send
+                        _replyToMessage.value = null
                         continuation.resume(message)
                     }
 
@@ -141,6 +156,11 @@ class MessageRepository(
                     if (caption.isNotBlank()) {
                         setCaption(caption)
                     }
+                    // Add reply metadata if replying to a message
+                    _replyToMessage.value?.let { replyTo ->
+                        val replyMetadata = ReplyMetadata.fromMessage(replyTo)
+                        metadata = ReplyMetadata.toJson(replyMetadata)
+                    }
                 }
 
                 // Set initial uploading state
@@ -151,6 +171,8 @@ class MessageRepository(
                         Log.d(TAG, "Media message sent successfully: ${message.id}")
                         updateMediaMessageState(message.id, MediaMessageState.Sent)
                         _messageUpdates.tryEmit(message)
+                        // Clear reply state after successful send
+                        _replyToMessage.value = null
                         continuation.resume(message)
                     }
 

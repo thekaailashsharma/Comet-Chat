@@ -4,52 +4,50 @@ import com.cometchat.chat.models.BaseMessage
 import org.json.JSONObject
 
 data class ReplyMetadata(
-    val messageId: Int,
-    val text: String,
-    val type: String,
-    val senderName: String,
-    val senderUid: String
+    val repliedToMessageId: Int,
+    val repliedToText: String,
+    val repliedToType: String,
+    val repliedToSender: String
 ) {
-    fun toJson(): JSONObject {
-        return JSONObject().apply {
-            put("reply_message_id", messageId)
-            put("reply_text", text)
-            put("reply_type", type)
-            put("reply_sender_name", senderName)
-            put("reply_sender_uid", senderUid)
-        }
-    }
-
     companion object {
-        fun fromJson(json: JSONObject?): ReplyMetadata? {
-            if (json == null) return null
+        private const val KEY_REPLIED_TO_ID = "repliedToMessageId"
+        private const val KEY_REPLIED_TO_TEXT = "repliedToText"
+        private const val KEY_REPLIED_TO_TYPE = "repliedToType"
+        private const val KEY_REPLIED_TO_SENDER = "repliedToSender"
+
+        fun fromMessage(message: BaseMessage): ReplyMetadata {
+            return ReplyMetadata(
+                repliedToMessageId = message.id,
+                repliedToText = when (message) {
+                    is com.cometchat.chat.models.TextMessage -> message.text
+                    is com.cometchat.chat.models.MediaMessage -> message.caption ?: "Media message"
+                    else -> "Message"
+                },
+                repliedToType = message.type,
+                repliedToSender = message.sender?.name ?: "Unknown"
+            )
+        }
+
+        fun toJson(metadata: ReplyMetadata): JSONObject {
+            return JSONObject().apply {
+                put(KEY_REPLIED_TO_ID, metadata.repliedToMessageId)
+                put(KEY_REPLIED_TO_TEXT, metadata.repliedToText)
+                put(KEY_REPLIED_TO_TYPE, metadata.repliedToType)
+                put(KEY_REPLIED_TO_SENDER, metadata.repliedToSender)
+            }
+        }
+
+        fun fromJson(json: JSONObject): ReplyMetadata? {
             return try {
                 ReplyMetadata(
-                    messageId = json.optInt("reply_message_id"),
-                    text = json.optString("reply_text"),
-                    type = json.optString("reply_type"),
-                    senderName = json.optString("reply_sender_name"),
-                    senderUid = json.optString("reply_sender_uid")
+                    repliedToMessageId = json.getInt(KEY_REPLIED_TO_ID),
+                    repliedToText = json.getString(KEY_REPLIED_TO_TEXT),
+                    repliedToType = json.getString(KEY_REPLIED_TO_TYPE),
+                    repliedToSender = json.getString(KEY_REPLIED_TO_SENDER)
                 )
             } catch (e: Exception) {
                 null
             }
-        }
-
-        fun fromMessage(message: BaseMessage): ReplyMetadata {
-            val text = when (message) {
-                is com.cometchat.chat.models.TextMessage -> message.text
-                is com.cometchat.chat.models.MediaMessage -> message.caption ?: "Media message"
-                else -> "Message"
-            }
-
-            return ReplyMetadata(
-                messageId = message.id,
-                text = text,
-                type = message.type,
-                senderName = message.sender?.name ?: "Unknown",
-                senderUid = message.sender?.uid ?: ""
-            )
         }
     }
 } 
