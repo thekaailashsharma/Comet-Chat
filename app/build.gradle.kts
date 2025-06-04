@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.runtime)
     implementation(libs.accompanist.permissions)
     implementation(libs.compose.swipebox)
+    implementation(libs.pdf.viewer)
 
 
     implementation(libs.chat.sdk.android)

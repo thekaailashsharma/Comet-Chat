@@ -7,8 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Camera
-import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,9 +22,10 @@ import learn.comet.chat.utils.FileUtils
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MediaPicker(
-    state: MediaPickerState,
-    onMediaSelected: (Uri, MediaType) -> Unit,
     onDismiss: () -> Unit,
+    onImageSelected: (Uri) -> Unit,
+    onVideoSelected: (Uri) -> Unit,
+    onPdfSelected: (Uri) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -38,7 +38,7 @@ fun MediaPicker(
     ) { success ->
         if (success) {
             currentPhotoUri?.let { uri ->
-                onMediaSelected(uri, MediaType.IMAGE)
+                onImageSelected(uri)
             }
         } else {
             Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
@@ -46,93 +46,142 @@ fun MediaPicker(
         onDismiss()
     }
     
-    val galleryLauncher = rememberLauncherForActivityResult(
+    val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri == null) {
-            Toast.makeText(context, "No media selected", Toast.LENGTH_SHORT).show()
-        } else {
-            val type = when {
-                uri.toString().contains("image") -> MediaType.IMAGE
-                uri.toString().contains("video") -> MediaType.VIDEO
-                else -> null
-            }
-            if (type != null) {
-                onMediaSelected(uri, type)
-            } else {
-                Toast.makeText(context, "Unsupported media type", Toast.LENGTH_SHORT).show()
-            }
-        }
+        uri?.let(onImageSelected)
         onDismiss()
     }
 
-    if (state != MediaPickerState.Hidden) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Select Media") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            when (cameraPermission.status) {
-                                PermissionStatus.Granted -> {
-                                    try {
-                                        val photoFile = FileUtils.createTempImageFile(context)
-                                        currentPhotoUri = FileUtils.getUriForFile(context, photoFile)
-                                        cameraLauncher.launch(currentPhotoUri!!)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(
-                                            context,
-                                            "Failed to create camera capture file: ${e.message}",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        e.printStackTrace()
-                                    }
-                                }
-                                is PermissionStatus.Denied -> {
-                                    cameraPermission.launchPermissionRequest()
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let(onVideoSelected)
+        onDismiss()
+    }
+
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let(onPdfSelected)
+        onDismiss()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Media") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = {
+                        when (cameraPermission.status) {
+                            PermissionStatus.Granted -> {
+                                try {
+                                    val photoFile = FileUtils.createTempImageFile(context)
+                                    currentPhotoUri = FileUtils.getUriForFile(context, photoFile)
+                                    cameraLauncher.launch(currentPhotoUri!!)
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "Failed to create camera capture file: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    e.printStackTrace()
                                 }
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                            is PermissionStatus.Denied -> {
+                                cameraPermission.launchPermissionRequest()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Camera,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Take Photo")
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    IconButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.size(72.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Camera,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Take Photo")
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = "Image",
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = "Image",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
 
-                    Button(
-                        onClick = {
-                            galleryLauncher.launch("image/*")
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                    IconButton(
+                        onClick = { videoPickerLauncher.launch("video/*") },
+                        modifier = Modifier.size(72.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Choose from Gallery")
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VideoLibrary,
+                                contentDescription = "Video",
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = "Video",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { pdfPickerLauncher.launch("application/pdf") },
+                        modifier = Modifier.size(72.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = "PDF",
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = "PDF",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
             }
-        )
-    }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 
     // Handle permission denied
     LaunchedEffect(cameraPermission.status) {

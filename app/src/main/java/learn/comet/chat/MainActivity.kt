@@ -1,5 +1,6 @@
 package learn.comet.chat
 
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -7,13 +8,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.ViewModelProvider
+import com.rajat.pdfviewer.HeaderData
+import com.rajat.pdfviewer.PdfRendererView
+import com.rajat.pdfviewer.compose.PdfRendererViewCompose
+import com.rajat.pdfviewer.util.PdfSource
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -46,42 +63,50 @@ class MainActivity : ComponentActivity() {
         setContent {
             LearnCometChatTheme {
                 val currentState by navigationState.collectAsState()
-                
+
                 Scaffold { padding ->
-                    when (currentState) {
-                        NavigationState.Initial, NavigationState.Auth -> {
+                    when (val state = currentState) {
+                        is NavigationState.Initial, is NavigationState.Auth -> {
                             AuthScreen(
+                                viewModel = authViewModel,
                                 onAuthSuccess = {
                                     navigationState.value = NavigationState.Users
                                 },
-                                viewModel = authViewModel,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(padding)
+                                modifier = Modifier.padding(padding)
                             )
                         }
-                        NavigationState.Users -> {
+                        is NavigationState.Users -> {
                             UsersScreen(
                                 viewModel = usersViewModel,
                                 onUserSelected = { user ->
-                                    Log.d(TAG, "Selected user: ${user.name} (${user.uid})")
                                     navigationState.value = NavigationState.Chat(user.uid)
                                 },
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(padding)
+                                modifier = Modifier.padding(padding)
                             )
                         }
                         is NavigationState.Chat -> {
                             ChatScreen(
                                 viewModel = messageViewModel,
-                                receiverId = (currentState as NavigationState.Chat).userId,
+                                receiverId = state.userId,
                                 onBackPressed = {
                                     navigationState.value = NavigationState.Users
                                 },
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(padding)
+                                onNavigateToPdf = { uri ->
+                                    navigationState.value = NavigationState.PdfViewer(uri, state.userId)
+                                },
+                                modifier = Modifier.padding(padding)
+                            )
+                        }
+                        is NavigationState.PdfViewer -> {
+                            PdfViewerScreen(
+                                uri = state.uri,
+                                onBackPressed = {
+                                    navigationState.value = NavigationState.Chat(state.previousChatUserId)
+                                },
+                                onShare = {
+                                    // Handle PDF sharing
+                                },
+                                modifier = Modifier.padding(padding)
                             )
                         }
                     }
@@ -130,9 +155,164 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PdfViewerScreen(
+    uri: Uri,
+    onBackPressed: () -> Unit,
+    onShare: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+    var downloadProgress by remember { mutableStateOf(0) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var currentPage by remember { mutableStateOf(1) }
+    var totalPages by remember { mutableStateOf(1) }
+    var isZoomedIn by remember { mutableStateOf(false) }
+    var zoomScale by remember { mutableStateOf(1f) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Column {
+                        Text("PDF Document")
+                        if (!isLoading) {
+                            Text(
+                                text = "Page $currentPage of $totalPages",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackPressed) {
+                        Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShare) {
+                        Icon(Icons.Default.Share, "Share")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            val statusCallback = remember(currentPage, totalPages, isLoading, errorMessage, downloadProgress) {
+                object : PdfRendererView.StatusCallBack {
+                    override fun onPdfLoadStart() {
+                        isLoading = true
+                        errorMessage = null
+                    }
+
+                    override fun onPdfLoadProgress(progress: Int, downloadedBytes: Long, totalBytes: Long?) {
+                        downloadProgress = progress
+                        isLoading = progress < 100
+                    }
+
+                    override fun onPdfLoadSuccess(absolutePath: String) {
+                        isLoading = false
+                        errorMessage = null
+                    }
+
+                    override fun onError(error: Throwable) {
+                        isLoading = false
+                        errorMessage = error.message
+                        Toast.makeText(context, "Error: ${error.message}", Toast.LENGTH_LONG).show()
+                    }
+
+                    override fun onPageChanged(page: Int, total: Int) {
+                        currentPage = page
+                        totalPages = total
+                    }
+                }
+            }
+
+            val zoomListener = remember(isZoomedIn, zoomScale) {
+                object : PdfRendererView.ZoomListener {
+                    override fun onZoomChanged(zoomed: Boolean, scale: Float) {
+                        isZoomedIn = zoomed
+                        zoomScale = scale
+                    }
+                }
+            }
+
+            PdfRendererViewCompose(
+                source = PdfSource.Remote(uri.toString()),
+                lifecycleOwner = lifecycleOwner,
+                modifier = Modifier.fillMaxSize(),
+                headers = HeaderData(mapOf()),
+                statusCallBack = statusCallback,
+                zoomListener = zoomListener
+            )
+
+            // Loading overlay
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                ) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Loading PDF... $downloadProgress%",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            // Error message
+            errorMessage?.let { error ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Error loading PDF",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBackPressed) {
+                            Text("Go Back")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 sealed class NavigationState {
     object Initial : NavigationState()
     object Auth : NavigationState()
     object Users : NavigationState()
     data class Chat(val userId: String) : NavigationState()
+    data class PdfViewer(val uri: Uri, val previousChatUserId: String) : NavigationState()
 }

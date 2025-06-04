@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import learn.comet.chat.messages.data.MessageRepository
 import kotlinx.coroutines.delay
+import learn.comet.chat.messages.data.MediaMessageState
 
 private const val TAG = "MessageViewModel"
 
@@ -254,6 +255,33 @@ class MessageViewModel(
         }
     }
 
+    fun handlePdfSelection(uri: Uri) {
+        setMediaPreview(uri, MediaType.PDF)
+    }
+
+    fun handlePdfClick(message: MediaMessage) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = MessageUiState.Loading
+                val fileUrl = message.attachment?.fileUrl
+                    ?: throw Exception("PDF file URL not found")
+                
+                // Update UI state to show loading
+                updateMediaMessageState(message.id, MediaMessageState.Downloading(0))
+                
+                // The actual download will be handled by the PDF viewer library
+                _uiState.value = MessageUiState.Success
+                
+                // Clear loading state once navigation happens
+                updateMediaMessageState(message.id, MediaMessageState.Sent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error handling PDF click: ${e.message}")
+                _uiState.value = MessageUiState.Error(e.message ?: "Failed to open PDF")
+                updateMediaMessageState(message.id, MediaMessageState.Error(e.message ?: "Failed to open PDF"))
+            }
+        }
+    }
+
     fun scrollToMessage(messageId: Int) {
         viewModelScope.launch {
             _highlightedMessageId.value = messageId
@@ -263,12 +291,30 @@ class MessageViewModel(
         }
     }
 
+    private fun updateMediaMessageState(messageId: Int, state: MediaMessageState) {
+        repository.updateMediaMessageState(messageId, state)
+    }
+
     override fun onCleared() {
         super.onCleared()
         messageListenerJob?.cancel()
         clearReplyToMessage()
         Log.d(TAG, "ViewModel cleared")
     }
+}
+
+sealed class MediaState {
+    object None : MediaState()
+    data class Preview(
+        val uri: Uri,
+        val type: MediaType,
+        val caption: String = ""
+    ) : MediaState()
+}
+
+enum class MediaPickerState {
+    Hidden,
+    Shown
 }
 
 sealed class MessageUiState {

@@ -143,19 +143,16 @@ class MessageRepository(
     ): Result<MediaMessage> {
         return try {
             Log.d(TAG, "Sending media message to receiver: $receiverId")
-            val file = FileUtils.getFileFromUri(context, uri)
-                ?: return Result.failure(Exception("Failed to process media file"))
-
+            val attachment = FileUtils.getFileFromUri(context, uri) ?: throw Exception("Failed to get file from URI")
+            
             val sentMessage = suspendCancellableCoroutine { continuation ->
                 val mediaMessage = MediaMessage(
                     receiverId,
-                    file,
+                    attachment,
                     type.toMessageType(),
                     CometChatConstants.RECEIVER_TYPE_USER
                 ).apply {
-                    if (caption.isNotBlank()) {
-                        setCaption(caption)
-                    }
+                    this.caption = caption
                     // Add reply metadata if replying to a message
                     _replyToMessage.value?.let { replyTo ->
                         val replyMetadata = ReplyMetadata.fromMessage(replyTo)
@@ -163,8 +160,7 @@ class MessageRepository(
                     }
                 }
 
-                // Set initial uploading state
-                updateMediaMessageState(mediaMessage.id, MediaMessageState.Uploading(0))
+                updateMediaMessageState(mediaMessage.id, MediaMessageState.Initial)
 
                 CometChat.sendMediaMessage(mediaMessage, object : CometChat.CallbackListener<MediaMessage>() {
                     override fun onSuccess(message: MediaMessage) {
@@ -190,7 +186,7 @@ class MessageRepository(
         }
     }
 
-    private fun updateMediaMessageState(messageId: Int, state: MediaMessageState) {
+    internal fun updateMediaMessageState(messageId: Int, state: MediaMessageState) {
         _mediaMessageStates.value = _mediaMessageStates.value.toMutableMap().apply {
             put(messageId, state)
         }
@@ -253,6 +249,7 @@ class MessageRepository(
     private fun MediaType.toMessageType(): String = when (this) {
         MediaType.IMAGE -> CometChatConstants.MESSAGE_TYPE_IMAGE
         MediaType.VIDEO -> CometChatConstants.MESSAGE_TYPE_VIDEO
+        MediaType.PDF -> CometChatConstants.MESSAGE_TYPE_FILE
     }
 }
 

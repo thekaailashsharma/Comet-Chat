@@ -120,6 +120,22 @@ fun MessageItem(
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                     }
+                                    CometChatConstants.MESSAGE_TYPE_FILE -> {
+                                        if (message.attachment?.fileExtension?.lowercase()?.endsWith("pdf") == true) {
+                                            PdfMessageContent(
+                                                message = message,
+                                                mediaState = mediaState,
+                                                textColor = textColor,
+                                                onClick = { /* Handle PDF click */ }
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "File: ${message.attachment?.fileName ?: "Unknown"}",
+                                                color = textColor,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

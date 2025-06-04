@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,6 +49,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import android.net.Uri
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
@@ -55,6 +58,7 @@ fun ChatScreen(
     viewModel: MessageViewModel,
     receiverId: String,
     onBackPressed: () -> Unit = {},
+    onNavigateToPdf: (Uri) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -117,13 +121,28 @@ fun ChatScreen(
         bottomBar = {
             Column {
                 if (mediaState is MediaState.Preview) {
-                    MediaPreview(
-                        state = mediaState as MediaState.Preview,
-                        onCaptionChange = viewModel::updateMediaCaption,
-                        onSend = viewModel::sendMediaMessage,
-                        onDismiss = viewModel::clearMediaPreview,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    when (val state = mediaState) {
+                        is MediaState.Preview -> {
+                            when (state.type) {
+                                MediaType.PDF -> {
+                                    MediaPreviewBar(
+                                        fileName = "PDF Document",
+                                        onSend = viewModel::sendMediaMessage,
+                                        onDismiss = viewModel::clearMediaPreview
+                                    )
+                                }
+                                else -> {
+                                    MediaPreview(
+                                        state = state,
+                                        onCaptionChange = viewModel::updateMediaCaption,
+                                        onSend = viewModel::sendMediaMessage,
+                                        onDismiss = viewModel::clearMediaPreview
+                                    )
+                                }
+                            }
+                        }
+                        else -> {}
+                    }
                 }
                 
                 replyToMessage?.let { message ->
@@ -138,7 +157,7 @@ fun ChatScreen(
                     text = messageText,
                     onTextChange = viewModel::updateMessageText,
                     onSendClick = viewModel::sendMessage,
-                    onAttachClick = { viewModel.showMediaPicker(MediaPickerState.Gallery) },
+                    onAttachClick = { viewModel.showMediaPicker(MediaPickerState.Shown) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -185,7 +204,15 @@ fun ChatScreen(
                                 }
                             }
                         },
-                        onScrollToMessage = viewModel::scrollToMessage
+                        onScrollToMessage = viewModel::scrollToMessage,
+                        onClick = { msg ->
+                            if (msg is MediaMessage && msg.type == CometChatConstants.MESSAGE_TYPE_FILE &&
+                                msg.attachment?.fileExtension?.lowercase()?.endsWith("pdf") == true) {
+                                msg.attachment?.fileUrl?.let { url ->
+                                    onNavigateToPdf(url.toUri())
+                                }
+                            }
+                        }
                     )
                 }
 
@@ -204,11 +231,14 @@ fun ChatScreen(
             }
 
             // Media picker
-            MediaPicker(
-                state = mediaPickerState,
-                onMediaSelected = { uri, type -> viewModel.setMediaPreview(uri, type) },
-                onDismiss = viewModel::hideMediaPicker
-            )
+            if (mediaPickerState == MediaPickerState.Shown) {
+                MediaPicker(
+                    onDismiss = viewModel::hideMediaPicker,
+                    onImageSelected = { uri -> viewModel.setMediaPreview(uri, MediaType.IMAGE) },
+                    onVideoSelected = { uri -> viewModel.setMediaPreview(uri, MediaType.VIDEO) },
+                    onPdfSelected = viewModel::handlePdfSelection
+                )
+            }
         }
     }
 }
@@ -257,6 +287,7 @@ fun AnimatedMessageItem(
     onReply: (BaseMessage) -> Unit,
     onSwipeStateChanged: (SwipeableState<Int>) -> Unit,
     onScrollToMessage: (Int) -> Unit,
+    onClick: (BaseMessage) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isCurrentUser = message.sender?.uid == CometChat.getLoggedInUser()?.uid
@@ -275,6 +306,7 @@ fun AnimatedMessageItem(
             onReply = onReply,
             onSwipeStateChanged = onSwipeStateChanged,
             onReplyClick = onScrollToMessage,
+            onClick = onClick,
             modifier = modifier
         )
     }
@@ -503,6 +535,52 @@ fun LoadMoreButton(onClick: () -> Unit) {
             .padding(vertical = 8.dp)
     ) {
         Text("Load More Messages")
+    }
+}
+
+@Composable
+fun PdfPreviewBar(
+    fileName: String,
+    onSend: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        tonalElevation = 3.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PictureAsPdf,
+                    contentDescription = "PDF"
+                )
+                Text(
+                    text = fileName,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Cancel")
+                }
+                IconButton(onClick = onSend) {
+                    Icon(Icons.Default.Send, contentDescription = "Send")
+                }
+            }
+        }
     }
 }
 

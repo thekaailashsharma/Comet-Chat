@@ -42,6 +42,7 @@ fun SwipeableMessageItem(
     onReply: (BaseMessage) -> Unit,
     onSwipeStateChanged: (SwipeableState<Int>) -> Unit,
     onReplyClick: (Int) -> Unit,
+    onClick: (BaseMessage) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -95,6 +96,7 @@ fun SwipeableMessageItem(
                     orientation = Orientation.Horizontal,
                     thresholds = { _, _ -> FractionalThreshold(0.3f) }
                 )
+                .clickable { onClick(message) }
         ) {
             MessageContent(
                 message = message,
