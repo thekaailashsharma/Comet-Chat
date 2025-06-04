@@ -1,4 +1,4 @@
-package learn.comet.chat.viewer
+package learn.comet.mediaviewer.viewer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

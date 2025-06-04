@@ -1,4 +1,4 @@
-package learn.comet.chat.viewer.components
+package learn.comet.mediaviewer.viewer.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons

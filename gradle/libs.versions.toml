@@ -16,6 +16,9 @@ materialIconsExtended = "1.7.8"
 pdfViewer = "2.3.7"
 runtime = "1.8.2"
 pdfViewerFragment = "1.0.0-alpha09"
+appcompat = "1.7.0"
+material = "1.12.0"
+zoomable = "2.8.0"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -40,9 +43,13 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-pdf = { group = "androidx.pdf", name = "pdf-viewer-fragment", version.ref = "pdfViewerFragment" }
 pdf-viewer = { module = "io.github.afreakyelf:Pdf-Viewer", version.ref = "pdfViewer" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 

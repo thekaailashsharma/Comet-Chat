@@ -42,9 +42,8 @@ import learn.comet.chat.messages.MessageViewModel
 import learn.comet.chat.ui.theme.LearnCometChatTheme
 import learn.comet.chat.users.UsersScreen
 import learn.comet.chat.users.UsersViewModel
-import learn.comet.chat.viewer.MediaViewer
-import learn.comet.chat.viewer.MediaViewerData
-import learn.comet.chat.viewer.MediaType
+import learn.comet.mediaviewer.viewer.MediaViewer
+import learn.comet.mediaviewer.viewer.MediaViewerData
 import java.util.Date
 
 private const val TAG = "MainActivity"

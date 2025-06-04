@@ -51,8 +51,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import android.net.Uri
 import androidx.core.net.toUri
-import learn.comet.chat.viewer.MediaType
-import learn.comet.chat.viewer.MediaViewerData
+import learn.comet.mediaviewer.viewer.MediaType
+import learn.comet.mediaviewer.viewer.MediaViewerData
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable

@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import learn.comet.chat.viewer.MediaType
+import learn.comet.mediaviewer.viewer.MediaType
 
 @Composable
 fun MediaPreview(

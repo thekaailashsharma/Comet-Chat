@@ -1,4 +1,4 @@
-package learn.comet.chat.viewer
+package learn.comet.mediaviewer.viewer
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -14,8 +14,8 @@ import com.rajat.pdfviewer.PdfRendererView
 import com.rajat.pdfviewer.compose.PdfRendererViewCompose
 import com.rajat.pdfviewer.util.PdfSource
 import com.rajat.pdfviewer.HeaderData
-import learn.comet.chat.viewer.components.ViewerFooter
-import learn.comet.chat.viewer.components.ViewerHeader
+import learn.comet.mediaviewer.viewer.components.ViewerFooter
+import learn.comet.mediaviewer.viewer.components.ViewerHeader
 
 @Composable
 fun PdfViewer(

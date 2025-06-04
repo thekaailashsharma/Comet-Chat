@@ -1,4 +1,4 @@
-package learn.comet.chat.viewer
+package learn.comet.mediaviewer.viewer
 
 import android.net.Uri
 import java.util.Date

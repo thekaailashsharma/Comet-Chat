@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import learn.comet.chat.utils.FileUtils
-import learn.comet.chat.viewer.MediaType
+import learn.comet.mediaviewer.viewer.MediaType
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 

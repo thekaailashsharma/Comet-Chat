@@ -22,4 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Learn Comet Chat"
 include(":app")
- 
+include(":mediaviewer")

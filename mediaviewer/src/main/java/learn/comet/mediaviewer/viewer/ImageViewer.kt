@@ -1,4 +1,4 @@
-package learn.comet.chat.viewer
+package learn.comet.mediaviewer.viewer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -9,8 +9,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import learn.comet.chat.viewer.components.ViewerFooter
-import learn.comet.chat.viewer.components.ViewerHeader
+import learn.comet.mediaviewer.viewer.components.ViewerFooter
+import learn.comet.mediaviewer.viewer.components.ViewerHeader
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 

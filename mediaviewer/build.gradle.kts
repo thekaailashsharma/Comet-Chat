@@ -1,21 +1,18 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
-    namespace = "learn.comet.chat"
+    namespace = "learn.comet.mediaviewer"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "learn.comet.chat"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -52,12 +49,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.coil.compose)
     implementation(libs.androidx.runtime)
-    implementation(libs.accompanist.permissions)
-    implementation(libs.compose.swipebox)
     implementation(libs.pdf.viewer)
     implementation(libs.zoomable)
     implementation(libs.chat.sdk.android)
-
-    implementation(project(":mediaviewer"))
-
 }

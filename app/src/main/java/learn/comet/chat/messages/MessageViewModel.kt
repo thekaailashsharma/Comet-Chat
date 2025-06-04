@@ -16,8 +16,8 @@ import kotlinx.coroutines.Job
 import learn.comet.chat.messages.data.MessageRepository
 import kotlinx.coroutines.delay
 import learn.comet.chat.messages.data.MediaMessageState
-import learn.comet.chat.viewer.MediaType
-import learn.comet.chat.viewer.MediaViewerData
+import learn.comet.mediaviewer.viewer.MediaType
+import learn.comet.mediaviewer.viewer.MediaViewerData
 import java.util.Date
 
 private const val TAG = "MessageViewModel"
