@@ -12,8 +12,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import learn.comet.chat.messages.MediaType
 import learn.comet.chat.utils.FileUtils
+import learn.comet.chat.viewer.MediaType
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -248,7 +248,6 @@ class MessageRepository(
 
     private fun MediaType.toMessageType(): String = when (this) {
         MediaType.IMAGE -> CometChatConstants.MESSAGE_TYPE_IMAGE
-        MediaType.VIDEO -> CometChatConstants.MESSAGE_TYPE_VIDEO
         MediaType.PDF -> CometChatConstants.MESSAGE_TYPE_FILE
     }
 }

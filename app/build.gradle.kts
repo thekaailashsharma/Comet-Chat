@@ -55,7 +55,7 @@ dependencies {
     implementation(libs.accompanist.permissions)
     implementation(libs.compose.swipebox)
     implementation(libs.pdf.viewer)
-
+    implementation("net.engawapg.lib:zoomable:2.8.0")
 
     implementation(libs.chat.sdk.android)
 }

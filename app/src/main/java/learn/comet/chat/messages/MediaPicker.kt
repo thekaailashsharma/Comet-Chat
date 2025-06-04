@@ -24,7 +24,6 @@ import learn.comet.chat.utils.FileUtils
 fun MediaPicker(
     onDismiss: () -> Unit,
     onImageSelected: (Uri) -> Unit,
-    onVideoSelected: (Uri) -> Unit,
     onPdfSelected: (Uri) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -50,13 +49,6 @@ fun MediaPicker(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let(onImageSelected)
-        onDismiss()
-    }
-
-    val videoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let(onVideoSelected)
         onDismiss()
     }
 
@@ -133,25 +125,6 @@ fun MediaPicker(
                         }
                     }
 
-                    IconButton(
-                        onClick = { videoPickerLauncher.launch("video/*") },
-                        modifier = Modifier.size(72.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.VideoLibrary,
-                                contentDescription = "Video",
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Text(
-                                text = "Video",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
 
                     IconButton(
                         onClick = { pdfPickerLauncher.launch("application/pdf") },

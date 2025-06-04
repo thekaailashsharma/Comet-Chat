@@ -3,6 +3,7 @@ package learn.comet.chat.messages
 import android.app.Application
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cometchat.chat.core.CometChat
@@ -15,6 +16,9 @@ import kotlinx.coroutines.Job
 import learn.comet.chat.messages.data.MessageRepository
 import kotlinx.coroutines.delay
 import learn.comet.chat.messages.data.MediaMessageState
+import learn.comet.chat.viewer.MediaType
+import learn.comet.chat.viewer.MediaViewerData
+import java.util.Date
 
 private const val TAG = "MessageViewModel"
 
@@ -48,6 +52,9 @@ class MessageViewModel(
 
     private val _highlightedMessageId = MutableStateFlow<Int?>(null)
     val highlightedMessageId: StateFlow<Int?> = _highlightedMessageId.asStateFlow()
+
+    private var _mediaViewerData = MutableStateFlow<MediaViewerData?>(null)
+    val mediaViewerData: StateFlow<MediaViewerData?> = _mediaViewerData.asStateFlow()
 
     fun setReplyToMessage(message: BaseMessage) {
         repository.setReplyToMessage(message)
@@ -260,26 +267,36 @@ class MessageViewModel(
     }
 
     fun handlePdfClick(message: MediaMessage) {
-        viewModelScope.launch {
-            try {
-                _uiState.value = MessageUiState.Loading
-                val fileUrl = message.attachment?.fileUrl
-                    ?: throw Exception("PDF file URL not found")
-                
-                // Update UI state to show loading
-                updateMediaMessageState(message.id, MediaMessageState.Downloading(0))
-                
-                // The actual download will be handled by the PDF viewer library
-                _uiState.value = MessageUiState.Success
-                
-                // Clear loading state once navigation happens
-                updateMediaMessageState(message.id, MediaMessageState.Sent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error handling PDF click: ${e.message}")
-                _uiState.value = MessageUiState.Error(e.message ?: "Failed to open PDF")
-                updateMediaMessageState(message.id, MediaMessageState.Error(e.message ?: "Failed to open PDF"))
-            }
+        message.attachment?.fileUrl?.let { url ->
+            handleMediaClick(
+                uri = url.toUri(),
+                type = MediaType.PDF,
+                name = message.attachment?.fileName ?: "Document"
+            )
         }
+    }
+
+    fun handleImageClick(message: MediaMessage) {
+        message.attachment?.fileUrl?.let { url ->
+            handleMediaClick(
+                uri = url.toUri(),
+                type = MediaType.IMAGE,
+                name = message.attachment?.fileName ?: "Image"
+            )
+        }
+    }
+
+    fun handleMediaClick(uri: Uri, type: MediaType, name: String) {
+        _mediaViewerData.value = MediaViewerData(
+            uri = uri,
+            type = type,
+            name = name,
+            timestamp = Date()
+        )
+    }
+
+    fun clearMediaViewer() {
+        _mediaViewerData.value = null
     }
 
     fun scrollToMessage(messageId: Int) {

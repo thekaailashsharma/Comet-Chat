@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import learn.comet.chat.viewer.MediaType
 
 @Composable
 fun MediaPreview(
@@ -40,7 +41,6 @@ fun MediaPreview(
                 Text(
                     text = when (state.type) {
                         MediaType.IMAGE -> "Image Preview"
-                        MediaType.VIDEO -> "Video Preview"
                         MediaType.PDF -> "PDF Preview"
                     },
                     style = MaterialTheme.typography.titleMedium
@@ -81,10 +81,6 @@ fun MediaPreview(
                         label = { Text("Add caption") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-                MediaType.VIDEO -> {
-                    // TODO: Implement video preview
-                    Text("Video preview not implemented yet")
                 }
                 MediaType.PDF -> {
                     Row(

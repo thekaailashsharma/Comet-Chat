@@ -51,14 +51,16 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import android.net.Uri
 import androidx.core.net.toUri
+import learn.comet.chat.viewer.MediaType
+import learn.comet.chat.viewer.MediaViewerData
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun ChatScreen(
     viewModel: MessageViewModel,
     receiverId: String,
-    onBackPressed: () -> Unit = {},
-    onNavigateToPdf: (Uri) -> Unit = {},
+    onBackPressed: () -> Unit,
+    onNavigateToMedia: (MediaViewerData) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -71,6 +73,7 @@ fun ChatScreen(
     val highlightedMessageId by viewModel.highlightedMessageId.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val mediaViewerData by viewModel.mediaViewerData.collectAsState()
 
     // Keep track of currently open swipe state
     var currentSwipeState: SwipeableState<Int>? by remember { mutableStateOf(null) }
@@ -108,6 +111,14 @@ fun ChatScreen(
                 }
                 return Offset.Zero
             }
+        }
+    }
+
+    // Add this LaunchedEffect to handle media navigation
+    LaunchedEffect(mediaViewerData) {
+        mediaViewerData?.let {
+            onNavigateToMedia(it)
+            viewModel.clearMediaViewer()
         }
     }
 
@@ -186,9 +197,7 @@ fun ChatScreen(
                         message = message,
                         mediaState = mediaMessageStates[message.id],
                         isHighlighted = message.id == highlightedMessageId,
-                        onReply = { msg ->
-                            viewModel.setReplyToMessage(msg)
-                        },
+                        onReply = viewModel::setReplyToMessage,
                         onSwipeStateChanged = { state ->
                             if (state.targetValue == 0 && currentSwipeState == state) {
                                 currentSwipeState = null
@@ -206,10 +215,16 @@ fun ChatScreen(
                         },
                         onScrollToMessage = viewModel::scrollToMessage,
                         onClick = { msg ->
-                            if (msg is MediaMessage && msg.type == CometChatConstants.MESSAGE_TYPE_FILE &&
-                                msg.attachment?.fileExtension?.lowercase()?.endsWith("pdf") == true) {
-                                msg.attachment?.fileUrl?.let { url ->
-                                    onNavigateToPdf(url.toUri())
+                            if (msg is MediaMessage) {
+                                when (msg.type) {
+                                    CometChatConstants.MESSAGE_TYPE_FILE -> {
+                                        if (msg.attachment?.fileExtension?.lowercase()?.endsWith("pdf") == true) {
+                                            viewModel.handlePdfClick(msg)
+                                        }
+                                    }
+                                    CometChatConstants.MESSAGE_TYPE_IMAGE -> {
+                                        viewModel.handleImageClick(msg)
+                                    }
                                 }
                             }
                         }
@@ -235,7 +250,6 @@ fun ChatScreen(
                 MediaPicker(
                     onDismiss = viewModel::hideMediaPicker,
                     onImageSelected = { uri -> viewModel.setMediaPreview(uri, MediaType.IMAGE) },
-                    onVideoSelected = { uri -> viewModel.setMediaPreview(uri, MediaType.VIDEO) },
                     onPdfSelected = viewModel::handlePdfSelection
                 )
             }

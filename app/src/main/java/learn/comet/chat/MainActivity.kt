@@ -42,6 +42,10 @@ import learn.comet.chat.messages.MessageViewModel
 import learn.comet.chat.ui.theme.LearnCometChatTheme
 import learn.comet.chat.users.UsersScreen
 import learn.comet.chat.users.UsersViewModel
+import learn.comet.chat.viewer.MediaViewer
+import learn.comet.chat.viewer.MediaViewerData
+import learn.comet.chat.viewer.MediaType
+import java.util.Date
 
 private const val TAG = "MainActivity"
 
@@ -91,20 +95,23 @@ class MainActivity : ComponentActivity() {
                                 onBackPressed = {
                                     navigationState.value = NavigationState.Users
                                 },
-                                onNavigateToPdf = { uri ->
-                                    navigationState.value = NavigationState.PdfViewer(uri, state.userId)
+                                onNavigateToMedia = { mediaData ->
+                                    navigationState.value = NavigationState.MediaViewer(
+                                        data = mediaData,
+                                        previousChatUserId = state.userId
+                                    )
                                 },
                                 modifier = Modifier.padding(padding)
                             )
                         }
-                        is NavigationState.PdfViewer -> {
-                            PdfViewerScreen(
-                                uri = state.uri,
+                        is NavigationState.MediaViewer -> {
+                            MediaViewer(
+                                data = state.data,
                                 onBackPressed = {
                                     navigationState.value = NavigationState.Chat(state.previousChatUserId)
                                 },
                                 onShare = {
-                                    // Handle PDF sharing
+                                    // Handle sharing
                                 },
                                 modifier = Modifier.padding(padding)
                             )
@@ -314,5 +321,8 @@ sealed class NavigationState {
     object Auth : NavigationState()
     object Users : NavigationState()
     data class Chat(val userId: String) : NavigationState()
-    data class PdfViewer(val uri: Uri, val previousChatUserId: String) : NavigationState()
+    data class MediaViewer(
+        val data: MediaViewerData,
+        val previousChatUserId: String
+    ) : NavigationState()
 }
